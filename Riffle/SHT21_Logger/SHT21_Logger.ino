@@ -1,3 +1,17 @@
+/*
+ * For the Riffle Datalogger
+ * Sketch logs the Temperature and Humidity from a SHT21 sensor
+ * at an interval.
+ * It uses the RTC as a scheduler by using an Alarm and Interrupt
+ * pin to wake up the ATmega at an interval.
+ * It logs to the SD card and outputs time and values in the Serial
+ * Monitor
+ * 
+ * Kina Smith
+ * kina.smith@gmail.com
+ */
+
+ 
 #include <Wire.h>
 #include <SHT2x.h>
 #include <SD.h>
@@ -8,15 +22,16 @@
 
 DS3231 rtc; //initialize the Real Time Clock
 
-const int led = 9;
-const int bat_v_pin = A3;
-const int bat_v_enable = 4;
-const int sd_pwr_enable = 6;
-const int chipSelect = 7;
-const int RTC_INT = 5; //This is the interrupt pin
+const int led = 9; //led pin
+const int bat_v_pin = A3; //battery voltage pin (1/2 of actual voltage)
+const int bat_v_enable = 4; //enable pin for bat. voltage read
+const int sd_pwr_enable = 6; //enable pin for SD power
+const int chipSelect = 7; //chipSelect for SD card
+const int RTC_INT = 5; //RTC interrupt pin
 
-int interval_min = 1; //this is the interval which the RTC will wake the MCU (microcontroller)
+int interval_sec = 20; //Logging interval in seconds
 
+//sensor values
 float bat_v;
 float temp;
 float humidity;
@@ -24,27 +39,29 @@ float humidity;
 void pin5_interrupt() {
   disableInterrupt(RTC_INT); //first it Disables the interrupt so it doesn't get retriggered
 }
+
 //Puts the MCU into power saving sleep mode and sets the wake time
-void enterSleep(int h, int m, int s) { //we give it an arguement for when we want it to wake up in Hour, Minute, Second
-  rtc.clearINTStatus(); //resets the alarm interrupt status on the RTC
-  enableInterrupt(RTC_INT, pin5_interrupt, FALLING); //Sets the interrupt on Pin5
-  rtc.enableInterrupts(h, m, s); //Sets the alarm on the RTC to the specified time
+void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
+  rtc.clearAlarm(); //resets the alarm interrupt status on the RTC
+  enableInterrupt(RTC_INT, pin5_interrupt, FALLING); //enables the interrupt on Pin5
+  rtc.enableAlarm(dt); //Sets the alarm on the RTC to the specified time (using the DateTime Object passed in)
   delay(100); //wait for a moment for everything to complete
   LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF); //power down everything until the alarm fires
 }
 
 float getBat_v(int read_p, int en_p) {
   float v;
-  digitalWrite(en_p, LOW);
-  delay(10);
-  v = analogRead(read_p);
-  delay(10);
-  digitalWrite(en_p, HIGH);
-  v = (v * (3.3 / 1024.0)) * 2.0;
-  return v;
+  digitalWrite(en_p, LOW); //write mosfet low to enable read
+  delay(10); //wait for it to settle
+  v = analogRead(read_p); //read voltage
+  delay(10); //wait some more...for some reason
+  digitalWrite(en_p, HIGH); //disable read circuit
+  v = (v * (3.3 / 1024.0)) * 2.0; //calculate actual voltage
+  return v; 
 }
 
-void writeDataToCard(float t, float h, float v, int t_mo, int t_d, int t_h, int t_m, int t_s) {
+void writeDataToCard(float t, float h, float v, long utc) {
+  //open and write files to SD card
   File dataFile = SD.open("LOG.CSV", FILE_WRITE);
   if (dataFile) {
     dataFile.print(t);
@@ -53,21 +70,14 @@ void writeDataToCard(float t, float h, float v, int t_mo, int t_d, int t_h, int 
     dataFile.print(",");
     dataFile.print(v);
     dataFile.print(",");
-    dataFile.print(t_mo);
-    dataFile.print(",");
-    dataFile.print(t_d);
-    dataFile.print(",");
-    dataFile.print(t_h);
-    dataFile.print(",");
-    dataFile.print(t_m);
-    dataFile.print(",");
-    dataFile.print(t_s);
+    dataFile.print(utc);
     dataFile.println();
     dataFile.close();
   }
 }
 
 void Blink(byte PIN, int DELAY_MS) {
+  //Blink an LED
   pinMode(PIN, OUTPUT);
   digitalWrite(PIN, HIGH);
   delay(DELAY_MS);
@@ -80,45 +90,51 @@ void setup() {
   Serial.begin(9600);
   pinMode(bat_v_enable, OUTPUT);
   pinMode(sd_pwr_enable, OUTPUT);
-  pinMode(RTC_INT, INPUT_PULLUP);
+  pinMode(RTC_INT, INPUT_PULLUP); //RTC interrupt line requires a pullup
 
-  rtc.begin();
-  rtc.adjust(DateTime((__DATE__), (__TIME__))); //this sets the RTC to the computer time. More documentation in other examples
+  rtc.begin(); //start RTC
+  //  rtc.adjust(DateTime((__DATE__), (__TIME__))); //sets the RTC to the computer time.
 
-  digitalWrite(sd_pwr_enable, LOW);
+  digitalWrite(sd_pwr_enable, LOW); //Enable power for SD card  
   if (!SD.begin(chipSelect)) {
     Serial.println("Card failed, or not present");
     while (1) {
-      digitalWrite(led, HIGH);
-      delay(200);
-      digitalWrite(led, LOW);
-      delay(200);
+      Blink(led, 200);
     }
   }
 }
 
 void loop() {
   DateTime now = rtc.now(); //get the current time
-  if (now.second() == 0) { //at the top of the minute....
-    //take readings
-    bat_v = getBat_v(bat_v_pin, bat_v_enable); //takes 20ms
-    temp = SHT2x.GetTemperature();
-    humidity = SHT2x.GetHumidity();
-    
-    //write data
-    writeDataToCard(temp, humidity, bat_v, now.month(), now.date(), now.hour(), now.minute(), now.second());
-    Blink(led, 100);
-    //calculate the next alarm time
-    int nextHour = now.hour();
-    int nextMinute = now.minute() + interval_min;
-    if (nextMinute >= 60) {
-      nextMinute -= 60;
-      //this bit of code assumes an interval time of less than 60 min. There is a more elegant way of doing this, I'm sure.
-      nextHour += 1;
-    }
-    Serial.println(temp);
-    Serial.println(humidity);
-    Serial.println(bat_v);
-    enterSleep(nextHour, nextMinute, 0); //enter Sleep until alarm fires
-  }
+  DateTime nextAlarm = DateTime(now.unixtime() + interval_sec);
+
+  Serial.print("The Current Time is: ");
+  Serial.print(now.unixtime());
+  Serial.println();
+
+  //take readings
+  bat_v = getBat_v(bat_v_pin, bat_v_enable); //takes 20ms
+  temp = SHT2x.GetTemperature();
+  humidity = SHT2x.GetHumidity();
+  
+  Serial.print("Temp: ");
+  Serial.print(temp);
+  Serial.print(", ");
+  Serial.print("Humidity: ");
+  Serial.print(humidity);
+  Serial.print(", ");
+  Serial.print("Batt V: ");
+  Serial.print(bat_v);
+  Serial.println();
+  
+  //write data
+  writeDataToCard(temp, humidity, bat_v, now.unixtime());
+  Blink(led, 100);
+  
+  Serial.print("Sleeping for ");
+  Serial.print(interval_sec);
+  Serial.print(" seconds.");
+  Serial.println();
+  enterSleep(nextAlarm); //enter Sleep until alarm fires
 }
+
