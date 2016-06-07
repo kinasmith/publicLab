@@ -48,9 +48,14 @@ void loop() {
 		int nextHour = now.hour();
 		int nextMinute = now.minute() + interval_min;
 		if (nextMinute >= 60) {
+			//assumes an interval time of less than 60 min. 
+			//There is a more elegant way of doing this, I'm sure. 
 			nextMinute -= 60;
-//this bit of code assumes an interval time of less than 60 min. There is a more elegant way of doing this, I'm sure. 
 			nextHour += 1;       
+		}
+		//if hour passes over 24 (ie. Midnight), set Hour to 00. 
+		if(nextHour >= 24) {
+			nextHour -= 24;
 		}
 		Serial.print("The Current Time is: ");
 		Serial.print(now.hour());
