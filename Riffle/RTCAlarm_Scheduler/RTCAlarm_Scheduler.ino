@@ -17,9 +17,8 @@
 DS3231 rtc; //initialize the Real Time Clock
 
 const int RTC_INT = 5; //This is the interrupt pin
-int interval_sec = 20; //this is the interval which the RTC will wake the MCU (microcontroller)
-
-int prevSecond = 0;
+int interval_sec = 10; //this is the interval which the RTC will wake the MCU (microcontroller)
+const int led = 9; //led pin
 
 //This function is called by the interrupt when it is triggered by the RTC
 void pin5_interrupt() {
@@ -57,7 +56,16 @@ void loop() {
   Serial.print(interval_sec);
   Serial.print(" seconds.");
   Serial.println();
-  
+  Blink(led, 250);
   enterSleep(nextAlarm); //enter Sleep until alarm fires
+}
+
+void Blink(byte PIN, int DELAY_MS) {
+  //Blink an LED
+  pinMode(PIN, OUTPUT);
+  digitalWrite(PIN, HIGH);
+  delay(DELAY_MS);
+  digitalWrite(PIN, LOW);
+  delay(DELAY_MS);
 }
 

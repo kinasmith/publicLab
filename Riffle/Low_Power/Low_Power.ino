@@ -1,17 +1,18 @@
-/*
- * For the Riffle Datalogger
- * Sketch logs the Temperature and Humidity from a SHT21 sensor
- * at an interval.
- * It uses the RTC as a scheduler by using an Alarm and Interrupt
- * pin to wake up the ATmega at an interval.
- * It logs to the SD card and outputs time and values in the Serial
- * Monitor
- * 
- * Kina Smith
- * kina.smith@gmail.com
- */
 
- 
+/*
+   For the Riffle Datalogger
+   Sketch logs the Temperature and Humidity from a SHT21 sensor
+   at an interval.
+   It uses the RTC as a scheduler by using an Alarm and Interrupt
+   pin to wake up the ATmega at an interval.
+   It logs to the SD card and outputs time and values in the Serial
+   Monitor
+
+   Kina Smith
+   kina.smith@gmail.com
+*/
+
+
 #include <Wire.h>
 #include <SHT2x.h>
 #include <SD.h>
@@ -28,9 +29,8 @@ const int bat_v_enable = 4; //enable pin for bat. voltage read
 const int sd_pwr_enable = 6; //enable pin for SD power
 const int chipSelect = 7; //chipSelect for SD card
 const int RTC_INT = 5; //RTC interrupt pin
-const int pinout_pwr_enable = 8; //enable pin for header power
 
-int interval_sec = 10; //Logging interval in seconds
+int interval_sec = 20; //Logging interval in seconds
 
 //sensor values
 float bat_v;
@@ -58,7 +58,7 @@ float getBat_v(int read_p, int en_p) {
   delay(10); //wait some more...for some reason
   digitalWrite(en_p, HIGH); //disable read circuit
   v = (v * (3.3 / 1024.0)) * 2.0; //calculate actual voltage
-  return v; 
+  return v;
 }
 
 void writeDataToCard(float t, float h, float v, long utc) {
@@ -87,56 +87,64 @@ void Blink(byte PIN, int DELAY_MS) {
 }
 
 void setup() {
+//  for (int i = 1 ; i < 18 ; i++) {
+//    pinMode(i, INPUT);
+//    digitalWrite(i, LOW);
+//  }
+
   Wire.begin();
   Serial.begin(9600);
   pinMode(bat_v_enable, OUTPUT);
   pinMode(sd_pwr_enable, OUTPUT);
   pinMode(RTC_INT, INPUT_PULLUP); //RTC interrupt line requires a pullup
-  pinMode(pinout_pwr_enable, OUTPUT);
-  digitalWrite(pinout_pwr_enable, HIGH);
+
   rtc.begin(); //start RTC
   //  rtc.adjust(DateTime((__DATE__), (__TIME__))); //sets the RTC to the computer time.
 
-  digitalWrite(sd_pwr_enable, LOW); //Enable power for SD card  
+//  digitalWrite(sd_pwr_enable, LOW); //Enable power for SD card
   if (!SD.begin(chipSelect)) {
     Serial.println("Card failed, or not present");
     while (1) {
       Blink(led, 200);
     }
   }
+  Serial.println("SD OK!");
+//  digitalWrite(sd_pwr_enable, HIGH);
 }
 
 void loop() {
+  /*
   DateTime now = rtc.now(); //get the current time
   DateTime nextAlarm = DateTime(now.unixtime() + interval_sec);
 
-//  Serial.print("The Current Time is: ");
-//  Serial.print(now.unixtime());
-//  Serial.println();
+  Serial.print("The Current Time is: ");
+  Serial.print(now.unixtime());
+  Serial.println();
 
   //take readings
   bat_v = getBat_v(bat_v_pin, bat_v_enable); //takes 20ms
   temp = SHT2x.GetTemperature();
   humidity = SHT2x.GetHumidity();
-  
-//  Serial.print("Temp: ");
-//  Serial.print(temp);
-//  Serial.print(", ");
-//  Serial.print("Humidity: ");
-//  Serial.print(humidity);
-//  Serial.print(", ");
-//  Serial.print("Batt V: ");
-//  Serial.print(bat_v);
-//  Serial.println();
-  
+
+  Serial.print("Temp: ");
+  Serial.print(temp);
+  Serial.print(", ");
+  Serial.print("Humidity: ");
+  Serial.print(humidity);
+  Serial.print(", ");
+  Serial.print("Batt V: ");
+  Serial.print(bat_v);
+  Serial.println();
+
   //write data
   writeDataToCard(temp, humidity, bat_v, now.unixtime());
   Blink(led, 100);
-  
-//  Serial.print("Sleeping for ");
-//  Serial.print(interval_sec);
-//  Serial.print(" seconds.");
-//  Serial.println();
+
+  Serial.print("Sleeping for ");
+  Serial.print(interval_sec);
+  Serial.print(" seconds.");
+  Serial.println();
   enterSleep(nextAlarm); //enter Sleep until alarm fires
+  */
 }
 
