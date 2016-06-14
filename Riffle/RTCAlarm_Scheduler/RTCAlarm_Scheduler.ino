@@ -10,7 +10,7 @@
 	------------ */
 
 #include <Wire.h>
-#include <EnableInterrupt.h>
+#include <EnableInterrupt.h> 
 #include <DS3231.h>
 #include <LowPower.h>
 
@@ -22,50 +22,50 @@ const int led = 9; //led pin
 
 //This function is called by the interrupt when it is triggered by the RTC
 void pin5_interrupt() {
-  disableInterrupt(RTC_INT); //first it Disables the interrupt so it doesn't get retriggered
+	disableInterrupt(RTC_INT); //first it Disables the interrupt so it doesn't get retriggered
 }
 
 //Puts the MCU into power saving sleep mode and sets the wake time
 void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
-  rtc.clearAlarm(); //resets the alarm interrupt status on the RTC
-  enableInterrupt(RTC_INT, pin5_interrupt, FALLING); //enables the interrupt on Pin5
-  rtc.enableAlarm(dt); //Sets the alarm on the RTC to the specified time (using the DateTime Object passed in)
-  delay(100); //wait for a moment for everything to complete
-  LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF); //power down everything until the alarm fires
+	rtc.clearAlarm(); //resets the alarm interrupt status on the RTC
+	enableInterrupt(RTC_INT, pin5_interrupt, FALLING); //enables the interrupt on Pin5
+	rtc.enableAlarm(dt); //Sets the alarm on the RTC to the specified time (using the DateTime Object passed in)
+	delay(100); //wait for a moment for everything to complete
+	LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF); //power down everything until the alarm fires
 }
 
 void setup() {
-  Serial.begin(9600);
-  pinMode(RTC_INT, INPUT_PULLUP);
-  Wire.begin();
-  rtc.begin();
-  //I personally like setting the time stamp to Greenwich Mean Time, that way the UnixTime code converts correctly for you time zone.
-  //I do this by setting my time zone on my computer to GMT, then uncommenting the following line, which sets the clock, the commenting it again when done.
-  //  rtc.adjust(DateTime((__DATE__), (__TIME__))); //this sets the RTC to the computer time. More documentation in other examples
+	Serial.begin(9600);
+	pinMode(RTC_INT, INPUT_PULLUP);
+	Wire.begin();
+	rtc.begin();
+	//I personally like setting the time stamp to Greenwich Mean Time, that way the UnixTime code converts correctly for you time zone.
+	//I do this by setting my time zone on my computer to GMT, then uncommenting the following line, which sets the clock, the commenting it again when done.
+	//  rtc.adjust(DateTime((__DATE__), (__TIME__))); //this sets the RTC to the computer time. More documentation in other examples
 }
 
 void loop() {
-  DateTime now = rtc.now(); //get the current time
-  
-  DateTime nextAlarm = DateTime(now.unixtime() + interval_sec);
+	DateTime now = rtc.now(); //get the current time
+	
+	DateTime nextAlarm = DateTime(now.unixtime() + interval_sec);
 
-  Serial.print("The Current Time is: ");
-  Serial.print(now.unixtime());
-  Serial.println();
-  Serial.print("Sleeping for ");
-  Serial.print(interval_sec);
-  Serial.print(" seconds.");
-  Serial.println();
-  Blink(led, 250);
-  enterSleep(nextAlarm); //enter Sleep until alarm fires
+	Serial.print("The Current Time is: ");
+	Serial.print(now.unixtime());
+	Serial.println();
+	Serial.print("Sleeping for ");
+	Serial.print(interval_sec);
+	Serial.print(" seconds.");
+	Serial.println();
+	Blink(led, 250);
+	enterSleep(nextAlarm); //enter Sleep until alarm fires
 }
 
 void Blink(byte PIN, int DELAY_MS) {
-  //Blink an LED
-  pinMode(PIN, OUTPUT);
-  digitalWrite(PIN, HIGH);
-  delay(DELAY_MS);
-  digitalWrite(PIN, LOW);
-  delay(DELAY_MS);
+	//Blink an LED
+	pinMode(PIN, OUTPUT);
+	digitalWrite(PIN, HIGH);
+	delay(DELAY_MS);
+	digitalWrite(PIN, LOW);
+	delay(DELAY_MS);
 }
 
