@@ -63,13 +63,13 @@ void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
 	LowPower.powerDown(SLEEP_FOREVER, ADC_OFF, BOD_OFF); //power down everything until the alarm fires
 }
 
-float getBat_v(int read_p, int en_p) {
+float getBat_v(int read, int en) {
 	float v;
-	digitalWrite(en_p, LOW); //write mosfet low to enable read
+	digitalWrite(en, LOW); //write mosfet low to enable read
 	delay(10); //wait for it to settle
-	v = analogRead(read_p); //read voltage
+	v = analogRead(read); //read voltage
 	delay(10); //wait some more...for some reason
-	digitalWrite(en_p, HIGH); //disable read circuit
+	digitalWrite(en, HIGH); //disable read circuit
 	v = (v * (3.3 / 1024.0)) * 2.0; //calculate actual voltage
 	return v; 
 }
