@@ -7,6 +7,12 @@
  * It logs to the SD card and outputs time and values in the Serial
  * Monitor
  * 
+ * This Sketch uses the SdFat.h library instead of the SD.h library that is 
+ * is included in the IDE due to a bug which doesn't allow the SD card to sleep.
+ * 
+ * Also, disabling the Serial writes will save some power. Once everything is
+ * tested and working set the debug variable to 0 to disable Serial.
+ * 
  * Kina Smith
  * kina.smith@gmail.com
  */
