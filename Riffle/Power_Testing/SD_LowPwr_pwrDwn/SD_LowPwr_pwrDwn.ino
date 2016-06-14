@@ -15,7 +15,7 @@
 #include "DS3231.h"   //  https://github.com/kinasmith/DS3231
 #include "LowPower.h"   //  https://github.com/rocketscream/Low-Power
 
-//#define DEBUG
+//#define DEBUG //power consumption is around 5mA w/Serial enabled. and 0.48mA w/o
 
 DS3231 rtc; //initialize the Real Time Clock
 SdFat sd;
@@ -34,7 +34,7 @@ const int SSpin = 10;
 
 int counter = 0;
 
-int interval_sec = 30; //Logging interval in seconds
+int interval_sec = 15; //Logging interval in seconds
 float bat_v;
 
 void setup() {
@@ -46,16 +46,10 @@ void setup() {
   pinMode(rtc_int, INPUT_PULLUP); //rtc needs the interrupt line to be pulled up
   // rtc.adjust(DateTime((__DATE__), (__TIME__))); //Adjust automatically
   pinMode(led, OUTPUT);
-  // pulling up the SPI lines at the start of Setup with 328p’s internal resistors
-  // Does this actually make a difference in power consumption? <--Check This
-  pinMode(chipSelect, OUTPUT); digitalWrite(chipSelect, HIGH); //pullup SD CS pin
-  pinMode(MOSIpin, OUTPUT); digitalWrite(MOSIpin, HIGH);//pullup the MOSI pin
-  pinMode(MISOpin, INPUT); digitalWrite(MISOpin, HIGH); //pullup the MISO pin
-  pinMode(SSpin, OUTPUT); digitalWrite(SSpin, HIGH);
-  //Set Battery reading enable line to OUTPUT and turn off by writing HIGH
-  pinMode(bat_v_enable, OUTPUT); digitalWrite(bat_v_enable, HIGH);
-  //Set SD PWR line and turn off
-  pinMode(sd_pwr_enable, OUTPUT); digitalWrite(sd_pwr_enable, HIGH);
+  pinMode(chipSelect, OUTPUT); 
+  pinMode(bat_v_enable, OUTPUT); 
+  digitalWrite(bat_v_enable, HIGH); //Turn off Battery Reading
+  pinMode(sd_pwr_enable, OUTPUT);
 }
 
 void loop() {
@@ -87,52 +81,15 @@ void loop() {
   enterSleep(nextAlarm);
 }
 
+
 void rtc_interrupt() {
   disableInterrupt(rtc_int); //first it Disables the interrupt so it doesn't get retriggered
 }
 
-void writeToSd(int v, long t, int c) {
-  digitalWrite(led, HIGH); //LED ON, write cycle start
-  digitalWrite(sd_pwr_enable, LOW); //Turn power to SD Card On
-  delay(1); //wait for SPI bus is properly activated
-#ifdef DEBUG
-  Serial.print("SD Card Initializing...");
-#endif
-  if (!sd.begin(chipSelect)) {  //init. card
-#ifdef DEBUG
-    Serial.println("Failed!");
-#endif
-    while (1); //if card fails to init. the led will stay lit.
-  }
-#ifdef DEBUG
-  Serial.println("Success");
-#endif
-  delay(10);
-#ifdef DEBUG
-  Serial.print("File Opening...");
-#endif
-  if (!myFile.open("data.csv", O_RDWR | O_CREAT | O_AT_END)) {  //open file
-#ifdef DEBUG
-    Serial.println("Failed!");
-#endif
-    while (1);
-  }
-#ifdef DEBUG
-  Serial.println("Sucess");
-#endif
-  myFile.print(v);
-  myFile.print(",");
-  myFile.print(t);
-  myFile.print(",");
-  myFile.print(c);
-  myFile.println();
-  myFile.close();
-  digitalWrite(led, LOW); //LED will stay on if something broke
-}
-
 void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
+  delay(20); //Wait for file writing to finish. 10ms works somethings, 20 is more stable
   digitalWrite(sd_pwr_enable, HIGH); //Turn off power to SD Card
-  delay(1); //wait for it to power down
+  delay(10); //wait for SD Card to power down
   rtc.clearAlarm(); //resets the alarm interrupt status on the rtc
   enableInterrupt(rtc_int, rtc_interrupt, FALLING); //enables the interrupt on Pin5
   rtc.enableAlarm(dt); //Sets the alarm on the rtc to the specified time (using the DateTime Object passed in)
@@ -158,3 +115,47 @@ void blink(byte PIN, int DELAY_MS) {
   delay(DELAY_MS);
 }
 
+///********************************************************************
+void writeToSd(int v, long t, int c) {
+  digitalWrite(led, HIGH); //LED ON, write cycle start
+  /**** POWER ON SD CARD ****/
+  digitalWrite(sd_pwr_enable, LOW); //Turn power to SD Card On
+  delay(20); //wait for power to stabilize (!!) 10ms works sometimes
+  /**** INIT SD CARD ****/
+#ifdef DEBUG
+  Serial.print("SD Card Initializing...");
+#endif
+  if (!sd.begin(chipSelect)) {  //init. card
+#ifdef DEBUG
+    Serial.println("Failed!");
+#endif
+    while (1); //if card fails to init. the led will stay lit.
+  }
+#ifdef DEBUG
+  Serial.println("Success");
+#endif
+  /**** OPEN FILE ****/
+#ifdef DEBUG
+  Serial.print("File Opening...");
+#endif
+  if (!myFile.open("data.csv", O_RDWR | O_CREAT | O_AT_END)) {  //open file
+#ifdef DEBUG
+    Serial.println("Failed!");
+#endif
+    while (1);
+  }
+#ifdef DEBUG
+  Serial.println("Success");
+#endif
+  /**** WRITE TO FILE ****/
+  myFile.print(v);
+  myFile.print(",");
+  myFile.print(t);
+  myFile.print(",");
+  myFile.print(c);
+  myFile.println();
+  myFile.close();
+  digitalWrite(led, LOW); //LED will stay on if something broke
+
+}
+//*********************************************************************/
