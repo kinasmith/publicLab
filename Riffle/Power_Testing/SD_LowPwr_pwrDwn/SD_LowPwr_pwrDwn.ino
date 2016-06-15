@@ -96,9 +96,9 @@ void rtc_interrupt() {
 //Excecutes: Turns off SD Card Power, Sets Wake Alarm and Interrupt, and Powers down the MCU
 ///////////////////////////////////////////////////
 void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
-  delay(20); //Wait for file writing to finish. 10ms works somethings, 20 is more stable
+  delay(100); //Wait for file writing to finish. 10ms works somethings, 20 is more stable
   digitalWrite(sd_pwr_enable, HIGH); //Turn off power to SD Card
-  delay(10); //wait for SD Card to power down
+  delay(100); //wait for SD Card to power down
   rtc.clearAlarm(); //resets the alarm interrupt status on the rtc
   enableInterrupt(rtc_int, rtc_interrupt, FALLING); //enables the interrupt on Pin5
   rtc.enableAlarm(dt); //Sets the alarm on the rtc to the specified time (using the DateTime Object passed in)
@@ -142,7 +142,7 @@ void writeToSd(int v, long t, int c) {
   digitalWrite(led, HIGH); //LED ON, write cycle start
   /**** POWER ON SD CARD ****/
   digitalWrite(sd_pwr_enable, LOW); //Turn power to SD Card On
-  delay(20); //wait for power to stabilize (!!) 10ms works sometimes
+  delay(100); //wait for power to stabilize (!!) 10ms works sometimes
   /**** INIT SD CARD ****/
 #ifdef DEBUG
   Serial.print("SD Card Initializing...");
