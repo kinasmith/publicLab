@@ -20,7 +20,7 @@
 #include "DS3231.h"   //  https://github.com/kinasmith/DS3231
 #include "LowPower.h"   //  https://github.com/rocketscream/Low-Power
 
-//#define DEBUG //power consumption is around 5mA w/Serial enabled. and 0.48mA w/o
+#define DEBUG //power consumption is around 5mA w/Serial enabled. and 0.48mA w/o
 
 DS3231 rtc; //initialize the Real Time Clock
 SdFat sd;
@@ -34,10 +34,10 @@ const int sd_pwr_enable = 6; //enable pin for SD power
 const int hdr_pwr_enable = 8; //enable pin for header power
 const int chipSelect = 7; //SPI Chip Select for SD Card
 
-int counter = 0;
 
 int interval_sec = 15; //Logging interval in seconds
 float bat_v;
+float temp;
 
 void setup() {
 #ifdef DEBUG
@@ -71,7 +71,15 @@ void loop() {
   Serial.println(" Volts.");
   Serial.flush();
 #endif
-  writeToSd(bat_v, now.unixtime(), counter++);
+  rtc.convertTemperature();
+  temp = rtc.getTemperature();
+#ifdef DEBUG
+  Serial.print("RTC Temp is: ");
+  Serial.print(temp);
+  Serial.println(" C.");
+  Serial.flush();
+#endif
+  writeToSd(now.unixtime(), temp, bat_v);
 #ifdef DEBUG
   Serial.print("SD Card Written. Sleeping for ");
   Serial.print(interval_sec);
@@ -96,7 +104,7 @@ void rtc_interrupt() {
 //Excecutes: Turns off SD Card Power, Sets Wake Alarm and Interrupt, and Powers down the MCU
 ///////////////////////////////////////////////////
 void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
-  delay(100); //Wait for file writing to finish. 10ms works somethings, 20 is more stable
+  delay(50); //Wait for file writing to finish. 10ms works somethings, 20 is more stable
   digitalWrite(sd_pwr_enable, HIGH); //Turn off power to SD Card
   delay(100); //wait for SD Card to power down
   rtc.clearAlarm(); //resets the alarm interrupt status on the rtc
@@ -133,12 +141,12 @@ void blink(byte PIN, int DELAY_MS) {
 }
 
 ///////////////////////////////////////////////////
-//Function: void writeToSd(Battery Voltage, Time Stamp, Record Number)
+//Function: void writeToSd(Time Stamp, Temperature, Battery Voltage)
 //Excecutes: Powers on SD Card, and records the give values into "data.csv"
 //Notes: The delay times are important. The SD Card initializations
 //     will fail if there isn't enough time between writing and sleeping
 ///////////////////////////////////////////////////
-void writeToSd(int v, long t, int c) {
+void writeToSd(long t, float v, float temp) {
   digitalWrite(led, HIGH); //LED ON, write cycle start
   /**** POWER ON SD CARD ****/
   digitalWrite(sd_pwr_enable, LOW); //Turn power to SD Card On
@@ -160,7 +168,7 @@ void writeToSd(int v, long t, int c) {
 #ifdef DEBUG
   Serial.print("File Opening...");
 #endif
-  if (!myFile.open("data.csv", O_RDWR | O_CREAT | O_AT_END)) {  //open file
+  if (!myFile.open("temp.csv", O_RDWR | O_CREAT | O_AT_END)) {  //open file
 #ifdef DEBUG
     Serial.println("Failed!");
 #endif
@@ -170,11 +178,11 @@ void writeToSd(int v, long t, int c) {
   Serial.println("Success");
 #endif
   /**** WRITE TO FILE ****/
-  myFile.print(v);
-  myFile.print(",");
   myFile.print(t);
   myFile.print(",");
-  myFile.print(c);
+  myFile.print(temp);
+  myFile.print(",");
+  myFile.print(v);
   myFile.println();
   myFile.close();
   digitalWrite(led, LOW); //LED will stay on if something broke
