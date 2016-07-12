@@ -36,7 +36,6 @@ const int sd_pwr_enable = 6; //enable pin for SD power
 const int hdr_pwr_enable = 8; //enable pin for header power
 const int chipSelect = 7; //SPI Chip Select for SD Card
 
-
 int interval_sec = 15; //Logging interval in seconds
 float bat_v;
 float temp;
@@ -160,7 +159,7 @@ void writeToSd(long t, float v, float temp) {
   if (DEBUG) Serial.println("Success");
   /**** OPEN FILE ****/
   if (DEBUG) Serial.print("File Opening...");
-  if (!myFile.open("temp.csv", O_RDWR | O_CREAT | O_AT_END)) {  //open file
+  if (!myFile.open("data.csv", O_RDWR | O_CREAT | O_AT_END)) {  //open file
     if (DEBUG) Serial.println("Failed!");
     while (1);
   }
