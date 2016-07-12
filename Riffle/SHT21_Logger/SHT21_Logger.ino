@@ -130,10 +130,10 @@ void loop() {
   }
   //take readings
   bat_v = getBat_v(bat_v_pin, bat_v_enable); //takes 20ms
-  //	temp = SHT2x.GetTemperature();
-  temp = 0;
-  //	humidity = SHT2x.GetHumidity();
-  humidity = 0;
+  temp = SHT2x.GetTemperature();
+
+  humidity = SHT2x.GetHumidity();
+
   if (debug) {
     Serial.print("Temp: ");
     Serial.print(temp);
