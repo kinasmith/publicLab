@@ -5,14 +5,14 @@
 
    Notes:
    Be careful with the delay times in the SD writing and the Sleep/Wakeup cycles.
-   They are delicate and can create instability if too short. 
-   
+   They are delicate and can create instability if too short.
+
    Sleeping current is ~480µA w/ stock SD Card and the Serial Library disabled.
 
-   Turn on and off the Serial printing by commenting out the '#define DEBUG' line of code
+   Turn on and off the Serial printing by setting the DEBUG variable to either 1 or 0.
    Using the Serial library increases current consumtion to ~5mA.
    Use it only for debugging porpoises.
-   Also when DEBUG is enabled it will set the RTC to your computer time every time you upload code. 
+   Also when DEBUG is enabled it will set the RTC to your computer time every time you upload code.
    If you want accurate Unix Time Stamps, set your time zone to Greenwhich mean time before uploading.
 */
 #include <Wire.h>
@@ -22,11 +22,11 @@
 #include "DS3231.h"   //  https://github.com/kinasmith/DS3231
 #include "LowPower.h"   //  https://github.com/rocketscream/Low-Power
 
-#define DEBUG //Comment out this line to disable the Serial port. 
-
 DS3231 rtc; //initialize the Real Time Clock
 SdFat sd;
 SdFile myFile;
+
+const int DEBUG = 0; //Enable or disable Serial Printing with this line. 1 is enabled, 0 is disabled.
 
 const int led = 9; //Feedback LED
 const int bat_v_pin = A3;
@@ -42,15 +42,11 @@ float bat_v;
 float temp;
 
 void setup() {
-#ifdef DEBUG
-  Serial.begin(9600);
-#endif
+  if (DEBUG) Serial.begin(9600);
   Wire.begin();
   rtc.begin();
   pinMode(rtc_int, INPUT_PULLUP); //rtc needs the interrupt line to be pulled up
-#ifdef DEBUG
-  rtc.adjust(DateTime((__DATE__), (__TIME__))); //Adjust automatically
-#endif
+  if (DEBUG) rtc.adjust(DateTime((__DATE__), (__TIME__))); //Adjust automatically
   pinMode(led, OUTPUT);
   pinMode(chipSelect, OUTPUT);
   pinMode(bat_v_enable, OUTPUT);
@@ -61,37 +57,37 @@ void setup() {
 void loop() {
   DateTime now = rtc.now(); //get the current time
   DateTime nextAlarm = DateTime(now.unixtime() + interval_sec);
-#ifdef DEBUG
-  Serial.print("Now: ");
-  Serial.print(now.unixtime());
-  Serial.print(" Alarm Set for: ");
-  Serial.println(nextAlarm.unixtime());
-  Serial.flush();
-#endif
+  if (DEBUG) {
+    Serial.print("Now: ");
+    Serial.print(now.unixtime());
+    Serial.print(" Alarm Set for: ");
+    Serial.println(nextAlarm.unixtime());
+    Serial.flush();
+  }
   bat_v = getBat_v(bat_v_pin, bat_v_enable); //takes 20ms
-#ifdef DEBUG
-  Serial.print("Battery Voltage is: ");
-  Serial.print(bat_v);
-  Serial.println(" Volts.");
-  Serial.flush();
-#endif
+  if (DEBUG) {
+    Serial.print("Battery Voltage is: ");
+    Serial.print(bat_v);
+    Serial.println(" Volts.");
+    Serial.flush();
+  }
   rtc.convertTemperature(); //prep temp registers from RTC
-  temp = rtc.getTemperature(); //Read that value 
-#ifdef DEBUG
-  Serial.print("RTC Temp is: ");
-  Serial.print(temp);
-  Serial.println(" C.");
-  Serial.flush();
-#endif
+  temp = rtc.getTemperature(); //Read that value
+  if (DEBUG) {
+    Serial.print("RTC Temp is: ");
+    Serial.print(temp);
+    Serial.println(" C.");
+    Serial.flush();
+  }
   writeToSd(now.unixtime(), temp, bat_v); //Write to the Sd card
-#ifdef DEBUG
-  Serial.print("SD Card Written. Sleeping for ");
-  Serial.print(interval_sec);
-  Serial.print(" seconds.");
-  Serial.println();
-  Serial.println("---------------------------------");
-  Serial.flush();
-#endif
+  if (DEBUG) {
+    Serial.print("SD Card Written. Sleeping for ");
+    Serial.print(interval_sec);
+    Serial.print(" seconds.");
+    Serial.println();
+    Serial.println("---------------------------------");
+    Serial.flush();
+  }
   enterSleep(nextAlarm); //Sleep until saved time
 }
 
@@ -156,31 +152,19 @@ void writeToSd(long t, float v, float temp) {
   digitalWrite(sd_pwr_enable, LOW); //Turn power to SD Card On
   delay(100); //wait for power to stabilize (!!) 10ms works sometimes
   /**** INIT SD CARD ****/
-#ifdef DEBUG
-  Serial.print("SD Card Initializing...");
-#endif
+  if (DEBUG) Serial.print("SD Card Initializing...");
   if (!sd.begin(chipSelect)) {  //init. card
-#ifdef DEBUG
-    Serial.println("Failed!");
-#endif
+    if (DEBUG) Serial.println("Failed!");
     while (1); //if card fails to init. the led will stay lit.
   }
-#ifdef DEBUG
-  Serial.println("Success");
-#endif
+  if (DEBUG) Serial.println("Success");
   /**** OPEN FILE ****/
-#ifdef DEBUG
-  Serial.print("File Opening...");
-#endif
+  if (DEBUG) Serial.print("File Opening...");
   if (!myFile.open("temp.csv", O_RDWR | O_CREAT | O_AT_END)) {  //open file
-#ifdef DEBUG
-    Serial.println("Failed!");
-#endif
+    if (DEBUG) Serial.println("Failed!");
     while (1);
   }
-#ifdef DEBUG
-  Serial.println("Success");
-#endif
+  if (DEBUG) Serial.println("Success");
   /**** WRITE TO FILE ****/
   myFile.print(t);
   myFile.print(",");
