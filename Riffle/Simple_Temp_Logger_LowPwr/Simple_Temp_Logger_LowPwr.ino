@@ -26,7 +26,7 @@ DS3231 rtc; //initialize the Real Time Clock
 SdFat sd;
 SdFile myFile;
 
-const int DEBUG = 0; //Enable or disable Serial Printing with this line. 1 is enabled, 0 is disabled.
+const int DEBUG = 1; //Enable or disable Serial Printing with this line. 1 is enabled, 0 is disabled.
 
 const int led = 9; //Feedback LED
 const int bat_v_pin = A3;
@@ -103,9 +103,9 @@ void rtc_interrupt() {
 //Excecutes: Turns off SD Card Power, Sets Wake Alarm and Interrupt, and Powers down the MCU
 ///////////////////////////////////////////////////
 void enterSleep(DateTime& dt) { //argument is Wake Time as a DateTime object
-  delay(50); //Wait for file writing to finish. 10ms works somethings, 20 is more stable
+  delay(50); //Wait for file writing to finish. 10ms works somethings, 50 is more stable
   digitalWrite(sd_pwr_enable, HIGH); //Turn off power to SD Card
-  delay(100); //wait for SD Card to power down
+  delay(100); //wait for SD Card to power down was 100ms
   rtc.clearAlarm(); //resets the alarm interrupt status on the rtc
   enableInterrupt(rtc_int, rtc_interrupt, FALLING); //enables the interrupt on Pin5
   rtc.enableAlarm(dt); //Sets the alarm on the rtc to the specified time (using the DateTime Object passed in)
